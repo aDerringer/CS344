@@ -715,6 +715,8 @@ if [ $(( runFlag & MULT )) -eq 0 ]
 then
 ident 10 10 > "$m1"
 generate 10 15 -100 100 > "$m2"
+#echo "$m1" > mt8
+#echo "$m2" > mt9
 echo "I * M == M? (5pt):" | tee -a "$log"
 message="Output result does not match known result"
 expect_success 5 120 "./$cmd multiply $m1 $m2" "$message" "$m2"
@@ -724,6 +726,8 @@ expect_success 5 120 "./$cmd multiply $m1 $m2" "$message" "$m2"
 generate 15 10 -100 100 > "$m1"
 ident 10 10 > "$m2"
 echo "M * I == M? (5pt):" | tee -a "$log"
+cat $m1
+cat $m2
 message="Output result does not match known result"
 expect_success 5 120 "./$cmd multiply $m1 $m2" "$message" "$m1"
 ((points+=score))

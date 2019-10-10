@@ -1,5 +1,19 @@
 #!/bin/bash
 
+########################################################
+# Program:	Matrices Arithmetic
+# Author:	Andrew Derringer
+# Last Edit:	10/10/2019
+# Summary:	Test inputs and outputs results of
+#		arithmetic on matricies.
+# Functions:	dims (dimensions) 1 parameter
+#		transpose 1 parameter
+#		mean 1 parameter
+#		add 2 parameters
+#		multiply 2 parameters
+########################################################
+
+
 ############ Validate Parameters #############
 # Summary: Exits program if number of args
 #	   doesn't match that required by user
@@ -9,10 +23,10 @@
 # Return:  stderr and exit if wrong number of args
 ##############################################
 validParam () {
-   if [ $1 != $2 ]
+   if [ $1 -ne $2 ]
    then
       echo "invalid number of arguments passed" 1>&2
-      exit 1
+      exit 4
    fi
 }
 
@@ -28,7 +42,7 @@ validFiles () {
       if [ ! -r "$arg" ]
       then
          echo File $arg was not readable 1>&2
-         exit 1
+         exit 5
       fi
    done
 }
@@ -45,7 +59,7 @@ getRows () {
    #that it's not empty then increments count
    while read line
    do
-      if [[ ${line:0:1} = [0-9] ]]
+      if [[ ${line:0:1} = [0-9] ]] || [[ ${line:0:1} = "-" ]]
       then
          ((rows+=1))
       fi
@@ -82,7 +96,7 @@ dims () {
 
    #Print rows then columns
    echo "$rows $cols"
-   
+   exit 0 
 }
 
 ############# Transpose Matrix ###############
@@ -114,8 +128,10 @@ transpose () {
    done
 
    #Print transversal and delete tempfile 
-   cat $tempTwo
-   rm -f $tempTwo
+   #cat $tempTwo
+   echo "$(cat $tempTwo)"
+   rm -f temp*
+   exit 0
 } 
 
 ############### Add Matrices #################
@@ -152,10 +168,8 @@ mean () {
          sum=$(($sum + $num))
          ((n+=1))
       done
-
-      #Calculate mean
-      mean=$(expr $sum / $n)
-
+      mean=$(( ($sum + ($n/2) *(($sum>0)*2 -1)) / $n ))
+      
       #If last number in row add newline else add tab
       if [ $line = $cols ]
       then
@@ -169,8 +183,10 @@ mean () {
    done
 
    #Print means and delete tempfile 
-   cat $tempTwo
-   rm -f $tempTwo
+   #cat $tempTwo
+   echo "$(cat $tempTwo)"
+   rm -f temp*
+   exit 0
 }
 
 ############### Add Matrices #################
@@ -182,7 +198,7 @@ mean () {
 # Param:   $2 matrix file
 # Return:  Sum of both matrices input
 ##############################################
-add () {
+add () { 
    #Check for valid num args and readable files
    validParam 2 $#
    validFiles $@ 
@@ -192,7 +208,7 @@ add () {
    if [ $(getRows $1) -ne $(getRows $2) ] || [ $(getColumns $1) -ne $(getColumns $2) ]
    then
       echo Matrices do not match dimensions 1>&2
-      exit 1
+      exit 3
    fi
 
    #Addition is possible
@@ -237,8 +253,10 @@ add () {
    done
 
    #Print new matrix and delete tempfile
-   cat $tempTwo
-   rm -f $tempTwo
+   #cat $tempTwo
+   echo "$(cat $tempTwo)"
+   rm -f temp*
+   exit 0
 }
 
 ############# Multiply Matrices ###############
@@ -258,7 +276,7 @@ multiply () {
 
    #Column and row must be equal to multiply
    #Compare cols and rows and error exit if not equal
-   if [ $(getColumns $1) -ne $(getRows $2) ]
+   if [ $(getColumns $1) -ne $(getRows $2) ] #||  [ $(getColumns $2) -ne $(getRows $1) ]
    then
       echo Bad dimensions for multiplication 1>&2
       exit 1
@@ -270,21 +288,30 @@ multiply () {
    #Set iterators for current line, rows, and cols
    rowLine=1
    rows=$(getRows $1)
-   cols=$(getRows $2)
+   cols=$(getColumns $2)
+   if [ $rows -le $cols ]
+      then
+         loops="$rows"
+      else
+         loops="$cols"
+   fi
 
+  #echo "$(getRows $1) $(getColumns $1)"
+   #echo "$(getRows $2) $(getColumns $2)"
+   #echo "$rows $cols"
    #Outer loop grabs the current row of first matrix in currRow
    while [ $rowLine -le $rows ]
    do
       currRow=$(head -n $rowLine $1 | tail -1)
-
+      #echo "$currRow"
       #set/reset iterator going through columns of 2nd matrix     
       colLine=1
 
       #middle loop grabs current column of 2nd matric in currCol
-      while [ $colLine -le $rows ]
+      while [ $colLine -le $cols ]
       do
          currCol=$(cut -f"$colLine" $2 | paste -s)
-
+         #echo "$currCol"
          #set/reset iterator and sum for innter loop
          num=1
          sum=0
@@ -292,17 +319,24 @@ multiply () {
          #Inner loop grabs the nth value of currRow and currCol
          #multiplies them and adds them to the some for the current
          #index
-         while [ $num -le $cols ]
+         #echo "Rows: $rows"
+
+         while [ $num -le $loops ]
          do
+            #echo "Loop: $num"
             rowVal=$(echo $currRow | cut -d " " -f $num)
             colVal=$(echo $currCol | cut -d " " -f $num)
-            product=$(expr $rowVal \* $colVal)
+            #echo "$rowVal $colVal"
+            product=$(($rowVal * $colVal))
+            #echo "$product"
             sum=$(( $sum + $product ))
+            #echo "$sum"
             ((num+=1))
          done
-
+         #mean=$(( ($sum + ($n/2) *(($sum>0)*2 -1)) / $n ))
+ 
          #If at the last index of the row add newline else don't
-         if [ $colLine = $rows ]
+         if [ $colLine = $cols ]
          then
             echo -e "$sum" >> "$tempTwo"
          else
@@ -321,8 +355,9 @@ multiply () {
    done
 
    #Print new matrix and delete tempfile
-   cat $tempTwo
-   rm -f $tempTwo
+   #cat $tempTwo
+   echo "$(cat $tempTwo)"
+   rm -f temp*
 } 
 
 #################### MAIN ####################
@@ -337,10 +372,28 @@ multiply () {
 
 #If only one arg passed then create temp file
 #and try to pass stdin to it.
-if [ "$#" = "1" ]
+if [ "$(type -t $1)" != "function" ]
+then
+   echo Error: No function entered 1>&2
+   exit 1
+fi
+#if [ $(type -t $1) != "function" ]
+#then
+#   echo Error: Not an Operation 1>&2
+#   exit 1
+#fi
+
+if [ "$#" = "0" ]
+then
+   echo Error: No arguments passed 1>&2
+   exit 1
+elif [ "$#" = "1" ]
 then
    tempFile="tempFile$$"
-   cat > "$tempFile"
+   if [ ! -t 0 ]
+   then
+      cat > "$tempFile"
+   fi
    #$1 "$tempFile"
 else
    #$1 "${@:2}"
@@ -348,3 +401,4 @@ else
 fi
 
 $1 "$tempFile" "${@:3}"
+rm -f temp*
