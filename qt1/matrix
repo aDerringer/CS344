@@ -1,0 +1,350 @@
+#!/bin/bash
+
+############ Validate Parameters #############
+# Summary: Exits program if number of args
+#	   doesn't match that required by user
+#	   specified program
+# Param:   $1 int for acceptable number of args
+# Param:   $2 = $# number of args sent to fxn
+# Return:  stderr and exit if wrong number of args
+##############################################
+validParam () {
+   if [ $1 != $2 ]
+   then
+      echo "invalid number of arguments passed" 1>&2
+      exit 1
+   fi
+}
+
+############### Readable File ################
+# Summary: Produces error and exits program if
+#	   any file passed is not readable
+# Param:   Any number of arguments
+# Return:  If file not readable then error exit
+##############################################
+validFiles () {
+   for arg in "${@}"
+   do
+      if [ ! -r "$arg" ]
+      then
+         echo File $arg was not readable 1>&2
+         exit 1
+      fi
+   done
+}
+
+############# Matrix Rows Count ##############
+# Summary: Output rows count in matrix file
+# Param:   $1 matrix file
+# Return:  Outputs int number of rows
+##############################################
+getRows () {
+   rows=0
+   
+   #Loop reads first index of each line to check
+   #that it's not empty then increments count
+   while read line
+   do
+      if [[ ${line:0:1} = [0-9] ]]
+      then
+         ((rows+=1))
+      fi
+   done < $1
+   
+   #Print number of rows
+   echo $rows
+}
+
+############# Matrix Column Count ############
+# Summary: Output columns count in matrix file
+# Param:   $1 matrix file
+# Return:  Outputs int number of columns
+##############################################
+getColumns () {
+   columns=$(head -n 1 $1 | wc -w)
+   echo $columns
+}
+
+############## Matrix Dimensions #############
+# Summary: Output dimensions of input matrix
+# Reqs:	   One arg that is readable file
+# Param:   $1 matrix file
+# Return:  Output rows then columns
+##############################################
+dims () {
+   #Check for valid num args and readable files
+   validParam 1 $#
+   validFiles $@
+
+   #Calls getRows and getColumns for dimensions
+   rows=$(getRows $1)
+   cols=$(getColumns $1)
+
+   #Print rows then columns
+   echo "$rows $cols"
+   
+}
+
+############# Transpose Matrix ###############
+# Summary: Flip dimension of matrix and print
+# Reqs:	   One arg that is readable file
+# Param:   $1 matrix file
+# Return:  Transposed matrix of input
+##############################################
+transpose () {
+   #Check for valid num args and readable files
+   validParam 1 $#
+   validFiles $@
+
+   #Create tempfile to hold line of mean of each column
+   tempTwo="tempTwo$$"
+
+   #citation:://www.thelinuxrain.com/articles/transposing-rows-and-columns-3-methods 
+   #Set iterators for columns and current line
+   line=1
+   cols=$(getColumns $1)
+
+   #Loop grabs column and outputs to tempfile
+   while [ $line -le $cols ]
+   do
+      (cut -f"$line" $1 | paste -s) >> "$tempTwo"
+      
+      #Iterate to grab next column
+      ((line+=1))
+   done
+
+   #Print transversal and delete tempfile 
+   cat $tempTwo
+   rm -f $tempTwo
+} 
+
+############### Add Matrices #################
+# Summary: Iterate through files of matrices and
+#	   output summation.
+# Reqs:	   Two args that are readable files
+# Param:   $1 matrix file
+# Param:   $2 matrix file
+# Return:  Summation of both matrices input
+##############################################
+mean () {
+   #Check for valid num args and readable files
+   validParam 1 $#
+   validFiles $@
+
+   #Create tempfile to hold line of mean of each column
+   tempTwo="tempTwo$$"
+
+   #Set iterators for columns and current line
+   line=1
+   cols=$(getColumns $1)
+
+   #Outer loop grabs column of numbers and puts in numLine
+   while [ $line -le $cols ]
+   do
+      #reset sum and total for each loop
+      sum=0
+      n=0
+      numLine=$(cut -f"$line" $1 | paste -s)
+
+      #Inner loop sums numbers and counts total
+      for num in $numLine
+      do
+         sum=$(($sum + $num))
+         ((n+=1))
+      done
+
+      #Calculate mean
+      mean=$(expr $sum / $n)
+
+      #If last number in row add newline else add tab
+      if [ $line = $cols ]
+      then
+         echo -e "$mean" >> "$tempTwo"
+      else
+         echo -e -n "$mean\t" >> "$tempTwo"
+      fi
+
+      #Iterate to next column
+      ((line+=1))
+   done
+
+   #Print means and delete tempfile 
+   cat $tempTwo
+   rm -f $tempTwo
+}
+
+############### Add Matrices #################
+# Summary: Iterate through files of matrices and
+#	   output sum.
+# Reqs:	   Two args that are readable files and
+#	   matrices of equal dimensions
+# Param:   $1 matrix file
+# Param:   $2 matrix file
+# Return:  Sum of both matrices input
+##############################################
+add () {
+   #Check for valid num args and readable files
+   validParam 2 $#
+   validFiles $@ 
+
+   #Matrices dimensions must be equal for addition
+   #Check if rows and columns equal for both args
+   if [ $(getRows $1) -ne $(getRows $2) ] || [ $(getColumns $1) -ne $(getColumns $2) ]
+   then
+      echo Matrices do not match dimensions 1>&2
+      exit 1
+   fi
+
+   #Addition is possible
+
+   #Set iterators for rows, columns, and current line
+   line=1
+   rows=$(getRows $1)
+   cols=$(getColumns $1)
+
+   #Create tempfile to hold final matrix in desired format
+   tempTwo="tempTwo$$"
+
+   #Outer loop grabs rows of each file one at a time
+   while [ $line -le $rows ]
+   do
+      #Assight current row to variables
+      matOne=$(head -n $line $1 | tail -1)
+      matTwo=$(head -n $line $2 | tail -1)
+
+      num=1
+      #Inner loop grabs matching number from each line
+      #and sums them before output to tempfile
+      while [ $num -le $cols ]
+      do
+         #Reset sum for each loop and add both numbers
+         sum=0
+         sum=$(( $sum + $(echo $matOne | cut -d " " -f $num)))
+         sum=$(( $sum + $(echo $matTwo | cut -d " " -f $num)))
+         
+         #If last number in row add newline else add tab
+         if [ $num = $cols ]
+         then
+            echo -e "$sum" >> "$tempTwo"
+         else
+            echo -e -n "$sum\t" >> "$tempTwo"
+         fi
+         #Increment num to sum next number in line
+         ((num+=1))
+      done
+      #Incrememnt line to feed next line and sum nums
+      ((line+=1))
+   done
+
+   #Print new matrix and delete tempfile
+   cat $tempTwo
+   rm -f $tempTwo
+}
+
+############# Multiply Matrices ###############
+# Summary: Iterate through files of matrices and
+#	   output product
+# Reqs:	   Two args that are readable files
+#          where columns in one matches rows in
+#	   the other
+# Param:   $1 matrix file
+# Param:   $2 matrix file
+# Return:  Procut of both matrices input
+##############################################
+multiply () {
+   #Check for valid num args and readable files
+   validParam 2 $#
+   validFiles $@
+
+   #Column and row must be equal to multiply
+   #Compare cols and rows and error exit if not equal
+   if [ $(getColumns $1) -ne $(getRows $2) ]
+   then
+      echo Bad dimensions for multiplication 1>&2
+      exit 1
+   fi
+
+   #Create tempfile to hold final matrix in desired format
+   tempTwo="tempTwo$$"
+
+   #Set iterators for current line, rows, and cols
+   rowLine=1
+   rows=$(getRows $1)
+   cols=$(getRows $2)
+
+   #Outer loop grabs the current row of first matrix in currRow
+   while [ $rowLine -le $rows ]
+   do
+      currRow=$(head -n $rowLine $1 | tail -1)
+
+      #set/reset iterator going through columns of 2nd matrix     
+      colLine=1
+
+      #middle loop grabs current column of 2nd matric in currCol
+      while [ $colLine -le $rows ]
+      do
+         currCol=$(cut -f"$colLine" $2 | paste -s)
+
+         #set/reset iterator and sum for innter loop
+         num=1
+         sum=0
+ 
+         #Inner loop grabs the nth value of currRow and currCol
+         #multiplies them and adds them to the some for the current
+         #index
+         while [ $num -le $cols ]
+         do
+            rowVal=$(echo $currRow | cut -d " " -f $num)
+            colVal=$(echo $currCol | cut -d " " -f $num)
+            product=$(expr $rowVal \* $colVal)
+            sum=$(( $sum + $product ))
+            ((num+=1))
+         done
+
+         #If at the last index of the row add newline else don't
+         if [ $colLine = $rows ]
+         then
+            echo -e "$sum" >> "$tempTwo"
+         else
+            echo -e -n "$sum\t" >> "$tempTwo"
+         fi
+ 
+         #Iterate to next column of 2nd matrix where all values
+         #Will be multiplied against the same row until all columns
+         #have been multiplied against row and outer loop is reached
+         #to iterate to the next row.
+         ((colLine+=1))
+      done
+
+       #Iterate to the next row
+      ((rowLine+=1))
+   done
+
+   #Print new matrix and delete tempfile
+   cat $tempTwo
+   rm -f $tempTwo
+} 
+
+#################### MAIN ####################
+# Summary: Checks for input from arugments and
+#	   from stdin which is assigned to a
+#	   temp file and passed to function of
+#	   user specification.
+# Param:   string operation for function call
+# Param:   0 - 2 input files for fxn operation
+# Return:  Dictated by funtion called
+##############################################
+
+#If only one arg passed then create temp file
+#and try to pass stdin to it.
+if [ "$#" = "1" ]
+then
+   tempFile="tempFile$$"
+   cat > "$tempFile"
+   #$1 "$tempFile"
+else
+   #$1 "${@:2}"
+   tempFile=$2
+fi
+
+$1 "$tempFile" "${@:3}"
