@@ -1,0 +1,8 @@
+ROOM NAME: Guards_Chambers
+CONNECTION 1: Kings_Chambers
+CONNECTION 2: Jail
+CONNECTION 3: Armory
+CONNECTION 4: Sanctuary
+CONNECTION 5: Zelda_Chambers
+CONNECTION 6: Observatory
+ROOM TYPE: MID_ROOM

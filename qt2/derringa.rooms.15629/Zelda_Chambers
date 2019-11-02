@@ -1,0 +1,8 @@
+ROOM NAME: Zelda_Chambers
+CONNECTION 1: Guards_Chambers
+CONNECTION 2: Jail
+CONNECTION 3: Observatory
+CONNECTION 4: Sanctuary
+CONNECTION 5: Kings_Chambers
+CONNECTION 6: Armory
+ROOM TYPE: END_ROOM
