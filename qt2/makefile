@@ -21,7 +21,7 @@ VAL     = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes
 
 # Link all Object Files with external Libraries into Binaries
 $(EXE): $(OBJ)
-	$(CC) $(LDFLAGS) $(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ) -lpthread
 
 # Objects depend on these Libraries
 $(OBJ): $(INCL)

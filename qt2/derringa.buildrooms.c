@@ -1,3 +1,17 @@
+/**********************************************************
+ * Progam: 	File Adventures
+ * Author: 	Andrew Derringer
+ * Last 	Modified: 10/31/2019
+ * Description:	Running this file generates a unique directory
+ * 		tagged with the current process ID and populates
+ * 		it with 7 files used to generate room structures
+ * 		elsewhere. There are 10 hardcoded possible rooms
+ * 		of which 7 are chosen at random and connected
+ * 		at random to 3 to 6 other rooms. Finally one room
+ * 		is identified as a starting room and another as a
+ * 		finishing room.
+**********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -7,18 +21,39 @@
 #include <string.h>
 #include <fcntl.h>
 
+// Global definitions for generating arrays of room structs
 #define DESIRED_ROOMS 7
 #define TOTAL_ROOMS 10
 #define MIN_CONNECTIONS 3
 #define MAX_CONNECTIONS 6
 
-/*
-const int DESIRED_ROOMS = 7;
-const int TOTAL_ROOMS = 10;
-const int MIN_CONNECTIONS = 3;
-const int MAX_CONNECTIONS = 6;
-*/
+/*******************************************
+ * Name: 	Room
+ * Summary: 	Manages strings printed together
+ * 		to the same file.
+ * Variable:	Unique name of room
+ * Variable:	Room type start, mid, or end
+ * Variable:	Array of connected room structs
+ * Variable:	Number of connections for efficient loops
+*******************************************/
+struct Room {
+   char name[20];
+   char roomType[12];
+   struct Room *connectedRooms[MAX_CONNECTIONS];
+   int connections;
+};
 
+
+/*******************************************
+ * Function: 	Directory Generator
+ * Summary: 	Combines process ID and desired 
+ * 		directory name into buffer,
+ * 		makes directory, and sets
+ * 		permissions.
+ * Param:	Empty buffer from main
+ * Param:	Size of buffer passed
+ * Output:	Makes directory
+*******************************************/
 void generateDirectory(char* filename_buffer, const int size) {
 
    // citation: stackoverflow.com/questions/34260350/appending-pid-to-filename
@@ -35,31 +70,26 @@ void generateDirectory(char* filename_buffer, const int size) {
       fprintf(stderr, "%s\n", "File name was too large for buffer. Process aborted.");
       exit(1);
    } else {
-      //printf("%s\n", filename_buffer);
       mkdir(filename_buffer, 0777);
    }
 }
 
-struct Room {
-   char name[20];
-   char roomType[12];
-   /*
-   struct Room *con1; char con1[20];
-   struct Room *con2; char con2[20];
-   struct Room *con3; char con3[20];
-   struct Room *con4; char con4[20];
-   struct Room *con5; char con5[20];
-   struct Room *con6; char con6[20];
-   */
-   struct Room *connectedRooms[MAX_CONNECTIONS];
-   int connections;
-};
 
+/*******************************************
+ * Function:	Generate Set of Rooms
+ * Summary:	Eliminates 3 of 10 hard coded rooms
+ * 		and generates 7 room structs with 
+ * 		remaining names.
+ * Param:	Array of room object points
+ * Param:	Length of array
+ * Output:	7 random rooms allocated, named
+ * 		and available to calling functions
+*******************************************/
 void generateRoomSet(struct Room **roomSet, const int size) {
 
    // size of and initialization of hard coded starting rooms
    char* possibleRooms[] = {"Library", "Dining_Room", "Observatory",
-				"Throne_Room", "Zelda_Chambers", "Kings_Chambers",
+				"Throne_Room", "Zeldas_Chambers", "Kings_Chambers",
 				"Armory", "Guards_Chambers", "Sanctuary", "Jail"};
 
    // determines which 3 room types won't be used at random
@@ -71,25 +101,27 @@ void generateRoomSet(struct Room **roomSet, const int size) {
    }
 
 
-   // iterate through room array and place new new room ptr in it
-   // set its name from possible rooms array and room type   
+   // iterate through room array and place new room ptr in it
+   // set its name from possible rooms array and roomtype 
    struct Room* newRoom;  // temp holder before placing ptr in arrayi
    for(i = 0; i < size; i++) {
+
+      // allocate space for new room and initialize it's variables
       newRoom = (struct Room*)malloc(sizeof(struct Room));
-      //newRoom->connectedRooms = {NULL};
+ 
       for (j = 0; j < MAX_CONNECTIONS; j++) {
         newRoom->connectedRooms[j] = NULL;
       }
       snprintf(newRoom->name, sizeof(newRoom->name), "%s", possibleRooms[i]);
       snprintf(newRoom->roomType, sizeof(newRoom->roomType), "MID_ROOM");
-      //printf("You got here...\n");
       newRoom->connections = 0;
+
       roomSet[i] = newRoom;
    }
 
    // determine which rooms will be start and end randomly
-   int startIdx = (rand() % (size + 1));
-   int endIdx = (rand() % (size + 1));
+   int startIdx = (rand() % (size));
+   int endIdx = (rand() % (size));
    while (endIdx == startIdx) {  // start and end cant be the same room
       endIdx = (rand() % (size + 1));
    } // clear the buffer and allow new room type string to be entered
@@ -97,9 +129,19 @@ void generateRoomSet(struct Room **roomSet, const int size) {
    snprintf(roomSet[startIdx]->roomType, sizeof(roomSet[startIdx]->roomType), "START_ROOM");
    memset(roomSet[endIdx]->roomType, 0, sizeof(roomSet[endIdx]->roomType));
    snprintf(roomSet[endIdx]->roomType, sizeof(roomSet[endIdx]->roomType), "END_ROOM");
+
 }
 
+
+/*******************************************
+ * Function:	Same Room
+ * Summary:	Bool function returning
+ * 		whether 2 object pointers are equal
+ * Param:	2 initialized room pointers
+ * Return:	1=true 0=false
+*******************************************/
 int sameRoom(struct Room *A, struct Room *B) {
+
    int same = 0;
 
    if (A == B) {
@@ -107,9 +149,20 @@ int sameRoom(struct Room *A, struct Room *B) {
    }
 
    return same;
+
 }
 
+
+/*******************************************
+ * Function:	Open Connections Check
+ * Summary:	Bool function returning
+ * 		whether a room object has space
+ * 		left to connect again.
+ * Param:	Initialized room objecy pointer
+ * Return:	1=yes 2=no
+*******************************************/
 int spaceLeft(struct Room *B) {
+
    int space = 0;
 
    if (B->connections < 6) {
@@ -117,11 +170,24 @@ int spaceLeft(struct Room *B) {
    }
    
    return space;
+
 }
 
+
+/*******************************************
+ * Function:	Connect Rooms
+ * Summary:	Iterates to find first empty
+ * 		position in A room struct's array
+ * 		of connected rooms and adds B.
+ * Param:	Room struct adding a connection
+ * Param:	Room struct being added
+ * Output:	Connected room struct.
+*******************************************/
 void connectRooms(struct Room *A, struct Room *B) {
    int i = 0;
 
+   // find the first null array index to add new connection
+   // could also iterate with connection member variable
    while (i < MAX_CONNECTIONS && A->connectedRooms[i] != NULL) {
       i++;
    }
@@ -130,6 +196,16 @@ void connectRooms(struct Room *A, struct Room *B) {
    A->connections++;
 } 
 
+
+
+/*******************************************
+ * Function:	Checking for connection
+ * Summary:	Bool uses 2 struct room pointers to see
+ * 		if they are already connected.
+ * Param:	Room struct being scanned
+ * Param:	Room struct being compared
+ * Return:	1=yes 0=no
+*******************************************/
 int alreadyConnected(struct Room *A, struct Room *B) {
    int linked = 0;
    int i = 0;
@@ -145,28 +221,60 @@ int alreadyConnected(struct Room *A, struct Room *B) {
    return linked;
 }
 
+
+/*******************************************
+ * Function:	Link Together Rooms
+ * Summary:	Calls other function to confirm that
+ * 		there is room to connect, they're not the
+ * 		same room, and that they aren't already
+ * 		connected. Then connect
+ * Param:	2 initialized room structs to be connected
+*******************************************/
 void addConnection(struct Room *A, struct Room *B) {
 
+   // if all requirements are met then connect both ways
    if (sameRoom(A, B) == 0 && spaceLeft(B) == 1 && alreadyConnected(A, B) == 0) {
       connectRooms(A, B);
       connectRooms(B, A);
    }
 }
 
+
+/*******************************************
+ * Function:	Generate all room connections
+ * Summary:	Loops through each room and while
+ * 		they don't have the minimum number
+ * 		of connections keep adding.
+ * Param:	Array of rooms with no connections
+ * Param:	size of array
+ * Param:	Min connection developer allows
+ * Param:	Max connections allowed
+ * Output:	Passed array of rooms all connected
+*******************************************/
 void generateConnections(struct Room **roomSet, const int size, const int min, const int max) {
+
+   // generate min connections this round from global min and max constants
    int minConnections = (rand() % (max - min + 1)) + min;
 
    int i, randRoom;
+   
+   // loop through each room in object and add more connections while their
+   // connection count is too low
    for (i = 0; i < size; i++) {
       while (roomSet[i]->connections < minConnections) {
          randRoom = (rand() % size);
-         //printf("connecting room %d and room %d\n", i, randRoom);
          addConnection(roomSet[i], roomSet[randRoom]);
       }
    }
-
 }
 
+
+/*******************************************
+ * Function:	Deallocate Array
+ * Summary:	Frees allocated array of allocations
+ * Param:	Initialized dynamic array of dynamic structs
+ * Ouput:	Frees memory from array
+********************************************/
 void freeRooms(struct Room **roomSet, const int size) {
    int i;
    for (i = 0; i < size; i++) {
@@ -183,43 +291,38 @@ void generateFile(char* filename_buffer, struct Room *A, const int size) {
 
    // Takes a char buffer of specified size and places datatypes into it.
    // Does not allow overflow and returns size of combined string for more info.
-   stringLength = snprintf(ofile_buffer, size, "%s%s%s", filename_buffer, "/", A->name);
+   stringLength = snprintf(ofile_buffer, size, "%s/%s", filename_buffer, A->name);
 
    if (stringLength < 0 || stringLength > size) {
       printf("File name was too large for buffer. Process aborted.\n");
-   } else {
-      //printf("file created: %s\n", ofile_buffer);
-      //mkdir(filename_buffer);
-   }
+   }   
 
+   // Opens file descriptor and prep buffer then used to write to file
+   // write accomplished in 3 steps
    int fd = open(ofile_buffer, O_WRONLY | O_CREAT, 0600);   
-   //ssize_t nwrite;
    int j = 0;
-
    char printline_buffer[100];
 
+   // 1) write structure room name to file and clear buffer
    snprintf(printline_buffer, 100, "%s%s\n", "ROOM NAME: ", A->name);
    write(fd, printline_buffer, strlen(printline_buffer) * sizeof(char));
    memset(printline_buffer, 0, sizeof(printline_buffer));
 
+   // 2) in loop write each connection to file and clear buffer
    while (j < MAX_CONNECTIONS && A->connectedRooms[j] != NULL) {
-      //printf("Connection %d: %s\n", j + 1, roomSet[i]->connectedRooms[j]->name);
       snprintf(printline_buffer, 100, "%s%d: %s\n", "CONNECTION ", j + 1, A->connectedRooms[j]->name);
       write(fd, printline_buffer, strlen(printline_buffer) * sizeof(char));
       memset(printline_buffer, 0, sizeof(printline_buffer));
-
-      //write(fd, A->connectedRooms[j]->name , strlen(A->connectedRooms[j]->name) * sizeof(char));
-      //write(fd, "\n", sizeof(char));
       j++;
    }
+
+   // 3) write room type to file and lcear buffer for cleanup
    snprintf(printline_buffer, 100, "%s%s\n", "ROOM TYPE: ", A->roomType);
    write(fd, printline_buffer, strlen(printline_buffer) * sizeof(char));
    memset(printline_buffer, 0, sizeof(printline_buffer));
 
-   //write(fd, A->roomType, strlen(A->roomType) * sizeof(char));
-   //write(fd, "\n", sizeof(char));
-
    close(fd);
+
 }
 
 int main () {
@@ -236,16 +339,9 @@ int main () {
    generateRoomSet(roomSet, DESIRED_ROOMS);
    generateConnections(roomSet, DESIRED_ROOMS, MIN_CONNECTIONS, MAX_CONNECTIONS);
 
-   // print statement to check on status of rooms
-   int i;//, j;
-   //char ofile_buffer[BUFFER_SIZE];
+   // loop through each room and output features to file
+   int i;
    for (i = 0; i < DESIRED_ROOMS ; i++) {
-     /* printf("Room %d: %s (%s)\n", i + 1, roomSet[i]->name, roomSet[i]->roomType);
-      j = 0;
-      while (j < MAX_CONNECTIONS && roomSet[i]->connectedRooms[j] != NULL) {
-         printf("Connection %d: %s\n", j + 1, roomSet[i]->connectedRooms[j]->name);
-         j++;
-      }*/
       generateFile(filename_buffer, roomSet[i], BUFFER_SIZE);
    }
 
