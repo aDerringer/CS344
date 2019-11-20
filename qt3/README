@@ -1,0 +1,7 @@
+READ ME: Small Shell
+
+to begin program:
+gcc -o smallsh main.c helpers.c
+
+to run program:
+smallsh
