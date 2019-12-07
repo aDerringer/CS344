@@ -1,0 +1,8 @@
+Andrew Derring
+
+Compile and Run:
+
+compileall
+otp_enc_d {port of your choice #1} &
+otp_dec_d {port of your choice #2} &
+./p4gradingscript {port #1} {port #2}
